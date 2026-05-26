@@ -147,12 +147,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-
             if (data.success) {
                 closeAuthModal();
                 checkAuth(); // Refresh UI
             } else {
-                authError.textContent = data.error;
+                // Map signup duplicate email error to generic login error
+                const lower = data.error.toLowerCase();
+                if (lower.includes('already') && lower.includes('registered')) {
+                    authError.textContent = 'Invalid email or password';
+                } else {
+                    authError.textContent = data.error;
+                }
+                // Reset inputs after error
+                authEmail.value = '';
+                authPassword.value = '';
             }
         } catch (err) {
             authError.textContent = 'Network error. Please try again.';

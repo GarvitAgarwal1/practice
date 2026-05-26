@@ -3,47 +3,43 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const isPostgres = !!process.env.DATABASE_URL;
-let db;
-let dbQuery, dbRun;
+// Use SQLite as the sole database
+const { DatabaseSync } = require('node:sqlite');
+const db = new DatabaseSync('database.sqlite');
+const dbQuery = (sql, params) => db.prepare(sql).all(params || []);
+const dbRun = (sql, params) => db.prepare(sql).run(params || []);
 
-if (isPostgres) {
-  const { Client } = require('pg');
-  db = new Client({ connectionString: process.env.DATABASE_URL });
-  db.connect();
-  dbQuery = (sql, params) => db.query(sql, params).then(res => res.rows);
-  dbRun = (sql, params) => db.query(sql, params);
-} else {
-  const { DatabaseSync } = require('node:sqlite');
-  db = new DatabaseSync('database.sqlite');
-  dbQuery = (sql, params) => db.prepare(sql).all(params || []);
-  dbRun = (sql, params) => db.prepare(sql).run(params || []);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      salt TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS sessions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_token TEXT UNIQUE NOT NULL,
-      user_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(user_id) REFERENCES users(id)
-    );
-    CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL,
-      message TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-}
-
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    salt TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_token TEXT UNIQUE NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+// Prepared statements for SQLite
+const getUserById = db.prepare('SELECT * FROM users WHERE id = ?');
+const getUserByEmail = db.prepare('SELECT * FROM users WHERE email = ?');
+const getSession = db.prepare('SELECT * FROM sessions WHERE session_token = ?');
+const insertUser = db.prepare('INSERT INTO users (email, password_hash, salt) VALUES (?, ?, ?)');
+const insertSession = db.prepare('INSERT INTO sessions (session_token, user_id) VALUES (?, ?)');
+const deleteSession = db.prepare('DELETE FROM sessions WHERE session_token = ?');
+const insertMessage = db.prepare('INSERT INTO messages (user_id, name, email, message) VALUES (?, ?, ?, ?)');
 // Helper functions for Auth
 function hashPassword(password, salt) {
     return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
@@ -78,12 +74,14 @@ const server = http.createServer((req, res) => {
   const cookies = parseCookies(req);
   const sessionToken = cookies.session_token;
   let currentUser = null;
-  
-  if (sessionToken) {
-      try {
-          currentUser = getSession.get(sessionToken);
-      } catch (e) { console.error(e); }
-  }
+    if (sessionToken) {
+       try {
+           const session = getSession.get(sessionToken);
+           if (session) {
+               currentUser = getUserById.get(session.user_id);
+           }
+       } catch (e) { console.error(e); }
+   }
 
   // --- Auth Endpoints ---
 
@@ -160,11 +158,16 @@ const server = http.createServer((req, res) => {
       return;
   }
 
-  if (req.method === 'GET' && req.url === '/auth/me') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ user: currentUser || null }));
-      return;
-  }
+   if (req.method === 'GET' && req.url === '/auth/me') {
+       if (currentUser) {
+           res.writeHead(200, { 'Content-Type': 'application/json' });
+           res.end(JSON.stringify({ user: { email: currentUser.email, id: currentUser.id } }));
+       } else {
+           res.writeHead(200, { 'Content-Type': 'application/json' });
+           res.end(JSON.stringify({ user: null }));
+       }
+       return;
+   }
 
   // --- Form Submission ---
 

@@ -1,0 +1,14 @@
+# Database files
+database.sqlite
+database.sqlite-journal
+database.sqlite-wal
+database.sqlite-shm
+
+# Environment variables
+.env
+.env.local
+
+# Node modules (just in case you add them later)
+node_modules/
+npm-debug.log
+yarn-error.log

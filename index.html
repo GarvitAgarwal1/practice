@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - She Can Foundation</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="top-nav">
+        <div class="logo">
+            <svg viewBox="0 0 24 24" class="logo-icon"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+            <div class="logo-text">
+                <span class="brand-she">She Can</span>
+                <span class="brand-found">FOUNDATION</span>
+            </div>
+        </div>
+        <nav>
+            <a href="#home" class="active">Home</a>
+            <a href="#about">About Us</a>
+            <button id="navLoginBtn" class="nav-btn">Login</button>
+            <div id="userMenu" class="hidden">
+                <span id="userEmailDisplay"></span>
+                <button id="navLogoutBtn" class="nav-btn nav-btn-outline">Logout</button>
+            </div>
+        </nav>
+    </header>
+
+    <section id="home" class="banner">
+        <div class="banner-content">
+            <h1>We'd Love to Hear<br><span>From You!</span></h1>
+            <p>Have a question, suggestion, or want to get involved?<br>Fill out the form and we will get back to you.</p>
+        </div>
+    </section>
+
+    <section id="about" class="about-section">
+        <div class="container">
+            <h2>About Us</h2>
+            <div class="about-text">
+                <p>She Can Foundation is a youth-driven NGO working towards creating opportunities, awareness, and positive social impact through education, digital initiatives, and community driven programs.</p>
+                <p>We genuinely understand that many students struggle to find opportunities where they can learn practical skills, build confidence, and gain experience without unnecessary pressure or unrealistic expectations.</p>
+                <p>At She Can Foundation, we believe talent should not be judged only by experience. Every student deserves a fair chance to learn, explore, and grow.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="contact-section">
+        <div class="container" style="max-width: 800px; margin: 0 auto;">
+            <div class="form-wrapper" id="formWrapper">
+                
+                <!-- Overlay blocking the form until logged in -->
+                <div class="auth-overlay" id="authOverlay">
+                    <div class="overlay-content">
+                        <h3>Sign In Required</h3>
+                        <p>Please sign in or create an account to send us a message.</p>
+                        <button id="overlayLoginBtn" class="overlay-btn nav-btn">Sign In / Sign Up</button>
+                    </div>
+                </div>
+
+                <h2>Send Us a Message</h2>
+                <form id="contactForm">
+                    <div class="input-group">
+                        <span class="input-icon">👤</span>
+                        <input type="text" id="name" name="name" required placeholder="Your Name">
+                    </div>
+                    
+                    <div class="input-group">
+                        <span class="input-icon">✉️</span>
+                        <!-- Email input is disabled since they must be logged in, auto-filled from session -->
+                        <input type="email" id="email" name="email" required placeholder="Your Email" disabled title="Your email is automatically linked from your account.">
+                    </div>
+                    
+                    <div class="input-group" style="align-items: flex-start;">
+                        <span class="input-icon" style="margin-top: 1rem;">💬</span>
+                        <textarea id="message" name="message" required placeholder="Your Message" rows="4"></textarea>
+                    </div>
+                    
+                    <button type="submit" id="submitBtn">
+                        <span class="btn-text">Submit Message</span>
+                    </button>
+                </form>
+
+                <div id="successMessage" class="success-message hidden">
+                    <div class="success-icon">✓</div>
+                    <p>Form Submitted Successfully</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModal">&times;</span>
+            <div class="modal-header">
+                <h2 id="modalTitle">Sign In</h2>
+                <p id="modalSubtitle">Welcome back to She Can Foundation</p>
+            </div>
+            <form id="authForm">
+                <div class="input-group">
+                    <span class="input-icon">✉️</span>
+                    <input type="email" id="authEmail" required placeholder="Email Address">
+                </div>
+                <div class="input-group">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" id="authPassword" required placeholder="Password">
+                </div>
+                <div id="authError" class="auth-error"></div>
+                <button type="submit" id="authSubmitBtn" class="nav-btn" style="width: 100%; margin-top: 1rem;">Sign In</button>
+            </form>
+            <div class="modal-footer">
+                <p id="authToggleText">Don't have an account? <a href="#" id="toggleAuthMode">Sign Up</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -2,49 +2,47 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { DatabaseSync } = require('node:sqlite'); // Node v22.5.0+
 
-const db = new DatabaseSync('database.sqlite');
+const isPostgres = !!process.env.DATABASE_URL;
+let db;
+let dbQuery, dbRun;
 
-// Initialize Tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    salt TEXT NOT NULL
-  );
+if (isPostgres) {
+  const { Client } = require('pg');
+  db = new Client({ connectionString: process.env.DATABASE_URL });
+  db.connect();
+  dbQuery = (sql, params) => db.query(sql, params).then(res => res.rows);
+  dbRun = (sql, params) => db.query(sql, params);
+} else {
+  const { DatabaseSync } = require('node:sqlite');
+  db = new DatabaseSync('database.sqlite');
+  dbQuery = (sql, params) => db.prepare(sql).all(params || []);
+  dbRun = (sql, params) => db.prepare(sql).run(params || []);
   
-  CREATE TABLE IF NOT EXISTS sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_token TEXT UNIQUE NOT NULL,
-    user_id INTEGER NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    message TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
-
-// Prepared Statements
-const insertUser = db.prepare('INSERT INTO users (email, password_hash, salt) VALUES (?, ?, ?)');
-const getUserByEmail = db.prepare('SELECT * FROM users WHERE email = ?');
-const insertSession = db.prepare('INSERT INTO sessions (session_token, user_id) VALUES (?, ?)');
-const deleteSession = db.prepare('DELETE FROM sessions WHERE session_token = ?');
-const getSession = db.prepare('SELECT u.id, u.email FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.session_token = ?');
-
-const insertMessage = db.prepare('INSERT INTO messages (user_id, name, email, message) VALUES (?, ?, ?, ?)');
-const checkRecentSubmission = db.prepare(`
-  SELECT COUNT(*) as count FROM messages 
-  WHERE user_id = ? AND created_at >= datetime('now', '-1 day')
-`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      salt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_token TEXT UNIQUE NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
 
 // Helper functions for Auth
 function hashPassword(password, salt) {
